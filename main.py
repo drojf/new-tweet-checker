@@ -1,11 +1,10 @@
 import collections
+import json
 import os
 import typing
 import re
 import shelve
-
-# External Imports
-import requests
+from urllib import request
 
 regex_data_tweet_id = re.compile(r'data-tweet-id="(\d+)"', flags=re.IGNORECASE)
 DB_KEY_TWEET_IDS = 'tweet_ids'
@@ -16,12 +15,10 @@ def default_dict_factory():
 
 
 def get_new_tweet_ids(url):
-    r = requests.get(url,
-                     headers={
-                         'User-Agent': 'My User Agent 1.0',
-                     })
+    r = request.Request(url)
+    r.add_header('User-Agent', 'My User Agent 1.0')
 
-    tweets_json = r.json()
+    tweets_json = json.loads(request.urlopen(r).read())
 
     if 'items_html' not in tweets_json:
         print("Error: items html missing on returned json")

@@ -63,7 +63,7 @@ def scan_and_update_db(usernames: typing.List[str]):
         for username in usernames:
             num_new_tweets = scan_url(db, username)
 
-            print(f'{username}: ', end='')
+            print(f'- {username}: ', end='')
             if num_new_tweets == 0:
                 print("No new tweets found")
             else:

@@ -74,5 +74,9 @@ def scan_and_update_db(usernames: typing.List[str]):
 
 
 if __name__ == '__main__':
+    with open('settings.json', 'rb') as json_settings:
+        settings = json.load(json_settings)
+        usernames = settings['usernames']
+
     print("Checking for new tweets...")
-    scan_and_update_db(['Twitter', 'cookingwithdog'])
+    scan_and_update_db(usernames)

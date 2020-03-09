@@ -26,10 +26,11 @@ class MyClient(discord.Client):
             await self.wait_until_ready()
             channel = self.get_channel(self.channel_id_to_ping)
             while not self.is_closed():
-                tweet_scan_result = tweet_scanner.scan_for_tweets()
-                if tweet_scan_result is not None:
+                tweet_scan_result = tweet_scanner.scan_for_tweets_as_url()
+                if tweet_scan_result:
                     # role id needs @& instead of just @
-                    message = f'New Tweets for <@&{self.role_id_to_ping}>:\n{tweet_scan_result}\n'
+                    tweet_urls_string = "\n".join(tweet_scan_result)
+                    message = f'New Tweets for <@&{self.role_id_to_ping}>:\n{tweet_urls_string}\n'
                     logging.info(f'Sending {message}')
                     await channel.send(message)
 

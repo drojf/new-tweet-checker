@@ -28,18 +28,20 @@ class MyClient(discord.Client):
             while not self.is_closed():
                 tweet_scan_result = tweet_scanner.scan_for_tweets_as_url()
                 if tweet_scan_result:
-                    # Ensure message stay below 2000 character limit by sending max 10 URLs at a time
+                    # Ensure message stay below 2000 character limit by sending max 3 URLs at a time
+                    # Discord will only preview 5 urls at a time, so send 3 at a time to be safe.
+                    # Also add a delay as sending too quickly may make previews fail to appear.
                     urls_to_send = []
                     first_message = True
                     for i, tweet_id in enumerate(tweet_scan_result):
                         urls_to_send.append(tweet_id)
-                        if len(urls_to_send) >= 10:
-                            await self.send_urls(channel, urls_to_send, notify=first_message)
+                        if len(urls_to_send) >= 3:
+                            await self.send_urls(channel, urls_to_send, notify=first_message, delay=3)
                             urls_to_send = []
                             first_message = False
 
                     if urls_to_send:
-                        await self.send_urls(channel, urls_to_send)
+                        await self.send_urls(channel, urls_to_send, delay=3)
 
                 await asyncio.sleep(MyClient.POLL_INTERVAL)
 
@@ -47,7 +49,7 @@ class MyClient(discord.Client):
         except Exception as e:
             logging.error("Error:", e)
 
-    async def send_urls(self, channel, urls, notify=False):
+    async def send_urls(self, channel, urls, notify=False, delay=None):
         # role id needs @& instead of just @
         tweet_urls_string = "\n".join(urls)
 
@@ -59,6 +61,8 @@ class MyClient(discord.Client):
         logging.info(f'Sending {message}')
         await channel.send(message)
 
+        if delay:
+            await asyncio.sleep(delay)
 
 logging.basicConfig(level=logging.INFO)
 

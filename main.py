@@ -138,8 +138,6 @@ class TweetScanner:
         return [f'https://twitter.com/Twitter/status/{tweet_id}' for tweet_id in self.scan_for_tweets()]
 
     def scan_for_tweets(self):
-        print("Checking for new tweets...")
-
         # Scan each user in the list
         results = []
         for query in self.queries:
@@ -147,16 +145,19 @@ class TweetScanner:
             if len(new_tweet_ids) > 0:
                 results.extend(new_tweet_ids)
 
-        # Save the database
-        # Python docs suggest sync() only needed when writeback option is used, but I found it wouldn't save immediately
-        # unless I called it myself
-        self.shelf[DB_KEY_TWEET_IDS] = self.db
-        self.shelf.sync()
-
         return results
 
     def close(self):
         self.shelf.close()
+
+    def save(self):
+        """
+        Save the database
+        Python docs suggest sync() only needed when writeback option is used, but I found it wouldn't save immediately
+        unless I called it myself
+        """
+        self.shelf[DB_KEY_TWEET_IDS] = self.db
+        self.shelf.sync()
 
     @staticmethod
     def default_dict_factory():
@@ -166,4 +167,5 @@ class TweetScanner:
 if __name__ == '__main__':
     scanner = TweetScanner()
     print(scanner.scan_for_tweets())
+    scanner.save()
     scanner.close()

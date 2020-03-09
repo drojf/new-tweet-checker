@@ -26,6 +26,7 @@ class MyClient(discord.Client):
             await self.wait_until_ready()
             channel = self.get_channel(self.channel_id_to_ping)
             while not self.is_closed():
+                logging.info("Checking for new tweets...")
                 tweet_scan_result = tweet_scanner.scan_for_tweets_as_url()
                 if tweet_scan_result:
                     # Ensure message stay below 2000 character limit by sending max 3 URLs at a time
@@ -42,6 +43,11 @@ class MyClient(discord.Client):
 
                     if urls_to_send:
                         await self.send_urls(channel, urls_to_send, delay=3)
+
+                    # Only save if all tweets were successfully sent
+                    tweet_scanner.save()
+                else:
+                    logging.info("No new tweets.")
 
                 await asyncio.sleep(MyClient.POLL_INTERVAL)
 
@@ -64,7 +70,12 @@ class MyClient(discord.Client):
         if delay:
             await asyncio.sleep(delay)
 
-logging.basicConfig(level=logging.INFO)
+
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s: %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 with open('discord_settings.json', 'rb') as json_settings:
     settings = json.load(json_settings)

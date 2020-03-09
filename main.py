@@ -30,10 +30,6 @@ class TwitterQuery:
         return f'User: {user_part} Search String: {search_part}'
 
 
-def default_dict_factory():
-    return set()
-
-
 def get_new_tweet_ids(url):
     r = request.Request(url)
     r.add_header('User-Agent', 'My User Agent 1.0')
@@ -80,55 +76,24 @@ def scan_url(db, query: TwitterQuery):
     return num_new_tweets
 
 
-def print_scan_result(query, num_new_tweets):
+def scan_result_as_string(query, num_new_tweets) -> str:
     if query.username != '':
         prefix = f'- {query.username}: '
     else:
         prefix = f'- {query.search_string}: '
 
     if num_new_tweets == 0:
-        print(f"{prefix}No new tweets found")
+        return f"{prefix}No new tweets found"
     else:
         if query.username != '':
-            print(f"{prefix}Found {num_new_tweets} new tweets! - https://twitter.com/{query.username}")
+            return f"{prefix}Found {num_new_tweets} new tweets! - https://twitter.com/{query.username}"
         else:
-            print(f"{prefix}Found {num_new_tweets} new tweets! - ({query})")
+            return f"{prefix}Found {num_new_tweets} new tweets! - ({query})"
 
 
-def scan_and_update_db(query_list: typing.List[TwitterQuery]):
-    db_folder = 'tweet_checker_db'
-    os.makedirs(db_folder, exist_ok=True)
-
-    with shelve.open(f'{db_folder}/tweet_ids') as shelf:
-        # Initialize the db on the shelf if it doesn't already exist
-        if DB_KEY_TWEET_IDS not in shelf:
-            db = collections.defaultdict(default_dict_factory)
-            shelf[DB_KEY_TWEET_IDS] = db
-
-        # Load the database
-        db = shelf[DB_KEY_TWEET_IDS]
-
-        # Scan each user in the list
-        for query in query_list:
-            num_new_tweets = scan_url(db, query)
-            print_scan_result(query, num_new_tweets)
-
-        # Save the database
-        shelf[DB_KEY_TWEET_IDS] = db
-
-
-def main():
-    with open('settings.json', 'rb') as json_settings:
-        settings = json.load(json_settings)
-        queries = settings['queries']
-
-    print("Checking for new tweets...")
-
-    if debug:
-        print(f"Base url: {TWITTER_SEARCH_URL}")
-
+def json_queries_to_python_queries(json_queries):
     twitter_queries = []
-    for query in queries:
+    for query in json_queries:
         username = ''
         search_string = ''
         if 'username' in query:
@@ -137,8 +102,60 @@ def main():
             search_string = query['search_string']
         twitter_queries.append(TwitterQuery(search_string, username))
 
-    scan_and_update_db(twitter_queries)
+    return twitter_queries
+
+
+class TweetScanner:
+    def __init__(self):
+        with open('settings.json', 'rb') as json_settings:
+            settings = json.load(json_settings)
+            self.queries = json_queries_to_python_queries(settings['queries'])
+
+        db_folder = 'tweet_checker_db'
+        os.makedirs(db_folder, exist_ok=True)
+        self.shelf = shelve.open(f'{db_folder}/tweet_ids')
+
+        # Initialize the db on the shelf if it doesn't already exist
+        if DB_KEY_TWEET_IDS not in self.shelf:
+            db = collections.defaultdict(TweetScanner.default_dict_factory)
+            self.shelf[DB_KEY_TWEET_IDS] = db
+
+        # Load the database
+        self.db = self.shelf[DB_KEY_TWEET_IDS]
+
+        if debug:
+            print(f"Base url: {TWITTER_SEARCH_URL}")
+
+    def scan_for_tweets(self):
+        print("Checking for new tweets...")
+
+        # Scan each user in the list
+        string_result = []
+        for query in self.queries:
+            num_new_tweets = scan_url(self.db, query)
+            if num_new_tweets > 0:
+                string_result.append(scan_result_as_string(query, num_new_tweets))
+
+        # Save the database
+        # Python docs suggest sync() only needed when writeback option is used, but I found it wouldn't save immediately
+        # unless I called it myself
+        self.shelf[DB_KEY_TWEET_IDS] = self.db
+        self.shelf.sync()
+
+        if string_result:
+            return '\n'.join(string_result)
+        else:
+            return None
+
+    def close(self):
+        self.shelf.close()
+
+    @staticmethod
+    def default_dict_factory():
+        return set()
 
 
 if __name__ == '__main__':
-    main()
+    scanner = TweetScanner()
+    print(scanner.scan_for_tweets())
+    scanner.close()

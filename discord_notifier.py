@@ -28,17 +28,36 @@ class MyClient(discord.Client):
             while not self.is_closed():
                 tweet_scan_result = tweet_scanner.scan_for_tweets_as_url()
                 if tweet_scan_result:
-                    # role id needs @& instead of just @
-                    tweet_urls_string = "\n".join(tweet_scan_result)
-                    message = f'New Tweets for <@&{self.role_id_to_ping}>:\n{tweet_urls_string}\n'
-                    logging.info(f'Sending {message}')
-                    await channel.send(message)
+                    # Ensure message stay below 2000 character limit by sending max 10 URLs at a time
+                    urls_to_send = []
+                    first_message = True
+                    for i, tweet_id in enumerate(tweet_scan_result):
+                        urls_to_send.append(tweet_id)
+                        if len(urls_to_send) >= 10:
+                            await self.send_urls(channel, urls_to_send, notify=first_message)
+                            urls_to_send = []
+                            first_message = False
+
+                    if urls_to_send:
+                        await self.send_urls(channel, urls_to_send)
 
                 await asyncio.sleep(MyClient.POLL_INTERVAL)
 
             tweet_scanner.close()
         except Exception as e:
             logging.error("Error:", e)
+
+    async def send_urls(self, channel, urls, notify=False):
+        # role id needs @& instead of just @
+        tweet_urls_string = "\n".join(urls)
+
+        header = ''
+        if notify:
+            header = f'New Tweets for <@&{self.role_id_to_ping}>:\n'
+
+        message = f'{header}{tweet_urls_string}\n'
+        logging.info(f'Sending {message}')
+        await channel.send(message)
 
 
 logging.basicConfig(level=logging.INFO)

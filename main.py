@@ -4,6 +4,7 @@ import os
 import typing
 import re
 import shelve
+from queue import Queue
 from urllib import request
 from urllib import parse
 
@@ -66,13 +67,14 @@ def scan_url(db, query: TwitterQuery):
     url_to_scan, unique_key = generate_twitter_query_url(query)
     tweet_ids_set = set(get_new_tweet_ids(url_to_scan))
 
-    old_tweet_set = db[unique_key]
+    old_tweet_set = set(db[unique_key])
     difference = tweet_ids_set.difference(old_tweet_set)
 
     num_new_tweets = len(difference)
 
+    # Keep the last 100 values in the cache
     if num_new_tweets > 0:
-        db[unique_key] = tweet_ids_set
+        db[unique_key] = (list(difference) + list(old_tweet_set))[:100]
 
     return list(difference)
 
@@ -161,7 +163,7 @@ class TweetScanner:
 
     @staticmethod
     def default_dict_factory():
-        return set()
+        return list()
 
 
 if __name__ == '__main__':

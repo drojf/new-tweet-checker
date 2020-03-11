@@ -25,6 +25,10 @@ class MyClient(discord.Client):
             tweet_scanner = TweetScanner()
             await self.wait_until_ready()
             channel = self.get_channel(self.channel_id_to_ping)
+            if not channel:
+                logging.error(f"Invalid channel id {self.channel_id_to_ping} - Can't send any messages!")
+                exit(-1)
+
             while not self.is_closed():
                 logging.info("Checking for new tweets...")
                 tweet_scan_result = tweet_scanner.scan_for_tweets_as_url()

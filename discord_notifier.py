@@ -42,7 +42,7 @@ class MyClient(discord.Client):
                             first_message = False
 
                     if urls_to_send:
-                        await self.send_urls(channel, urls_to_send, delay=3)
+                        await self.send_urls(channel, urls_to_send, notify=first_message, delay=3)
 
                     # Only save if all tweets were successfully sent
                     tweet_scanner.save()

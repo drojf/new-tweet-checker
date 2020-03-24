@@ -65,18 +65,16 @@ def generate_twitter_query_url(query: TwitterQuery):
 
 def scan_url(db, query: TwitterQuery):
     url_to_scan, unique_key = generate_twitter_query_url(query)
-    tweet_ids_set = set(get_new_tweet_ids(url_to_scan))
+    retrieved_tweets_set = set(get_new_tweet_ids(url_to_scan))
+    saved_tweets_set = set(db[unique_key])
 
-    old_tweet_set = set(db[unique_key])
-    difference = tweet_ids_set.difference(old_tweet_set)
+    new_tweets_set = retrieved_tweets_set.difference(saved_tweets_set)
 
-    num_new_tweets = len(difference)
+    # Keep new items first, followed by old items, capped at last 100 values.
+    if len(new_tweets_set) > 0:
+        db[unique_key] = (list(new_tweets_set) + db[unique_key])[:100]
 
-    # Keep the last 100 values in the cache
-    if num_new_tweets > 0:
-        db[unique_key] = (list(difference) + list(old_tweet_set))[:100]
-
-    return list(difference)
+    return list(new_tweets_set)
 
 
 def scan_result_as_string(query, new_tweet_ids: typing.List[str]) -> str:
